@@ -1,6 +1,6 @@
 ## RedCarpetUp
 
-####Interview Stage I
+#### Interview Stage I
 * created flask app
 * created /post_location RESTful Api Route
 * created api-tester.py testcase file
