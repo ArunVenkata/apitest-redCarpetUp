@@ -1,7 +1,10 @@
+import ast
 import json
 
 import psycopg2 as sql
 from flask import Flask, jsonify, request
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
 
 from earthdist import earth_distance
 
@@ -20,24 +23,6 @@ def post_loc():
     if request.json:
 
         req_data = json.loads(request.json)
-        try:
-            # check if "address" exists
-            print(req_data["address"])
-
-            # check if "pin" exists
-            print(req_data["pin"])
-
-            # check if "lat" exists
-            print(req_data["lat"])
-
-            # check if "long" exists
-            print(req_data["long"])
-
-            # check if "pin" exists
-            print(req_data["state"])
-
-        except KeyError:
-            return jsonify(bad_req)
 
         # get all latitudes and longitudes
         c.execute("SELECT latitude,longitude from indata WHERE latitude!='' or longitude!='';")
@@ -79,6 +64,122 @@ def post_loc():
         return jsonify({"Status": "200",
                         "Locations": close_locs}) if close_locs else jsonify({"Status": "200"})
 
+    else:
+        return jsonify(bad_req)
+
+
+def getlocs(lat, lon, by_self=False):
+    c.execute("SELECT key, latitude,longitude from indata;")
+    rows = c.fetchall()
+    li = []
+    if by_self:
+        # One Liner for the whole process
+        li = [x[0] for x in rows if
+              x[1] != "" and x[2] != "" and earth_distance(lat, lon, float(x[1]), float(x[2])) <= 5]
+
+    else:
+        c.execute("CREATE EXTENSION IF NOT EXISTS cube CASCADE;")
+        c.execute("CREATE EXTENSION  IF NOT EXISTS earthdistance CASCADE;")
+
+        print("ROWS", rows)
+        for x in rows:
+            # get Distance for each point
+            if x[1] == "" or x[2] == "":
+                continue
+
+            c.execute("""SELECT (point({0},{1}) <@> point({2}, {3}))""".format(
+                lat, lon, x[1], x[2]))
+
+            res = c.fetchall()[0][0]
+            print("RES", res)
+            if float(res) <= 5:
+                li.append(x[0])
+    return li
+
+
+@app.route("/get_using_postgres", methods=["POST", "GET"])
+def get_using_postgres():
+    if request.method == "POST":
+        if request.json:
+            req_data = json.loads(request.json)
+            try:
+                # check if "lat" exists
+                print(req_data["lat"])
+
+                # check if "long" exists
+                print(req_data["long"])
+
+            except KeyError:
+                return jsonify(bad_req)
+
+            else:
+                return jsonify({"Status": "200", "Nearby Locations": getlocs(req_data["lat"], req_data["long"])})
+
+        else:
+            return jsonify(bad_req)
+    else:
+        # define params on server
+        lat = 28.55
+        lon = 77.2667
+
+        return jsonify({"Status": "200", "Nearby Locations": getlocs(lat, lon)})
+
+
+@app.route("/get_using_self", methods=["POST", "GET"])
+def get_using_self():
+    if request.method == "POST":
+        if request.json:
+            req_data = json.loads(request.json)
+            try:
+                # check if "lat" exists
+                print(req_data["lat"])
+
+                # check if "long" exists
+                print(req_data["long"])
+
+            except KeyError:
+                return jsonify(bad_req)
+
+            else:
+                return jsonify(
+                    {"Status": "200", "Nearby Locations": getlocs(req_data["lat"], req_data["long"], by_self=True)})
+
+        else:
+            return jsonify(bad_req)
+    else:
+        # define params on server
+        lat = 28.55
+        lon = 77.2667
+
+        return jsonify({"Status": "200", "Nearby Locations": getlocs(lat, lon, by_self=True)})
+
+
+@app.route("/get_place", methods=["POST"])
+def get_place():
+    if request.json:
+        req_data = json.loads(request.json)
+        try:
+            # check if "lat" exists
+            print(req_data["lat"])
+
+            # check if "long" exists
+            print(req_data["long"])
+
+        except KeyError:
+            return jsonify(bad_req)
+
+        c.execute("SELECT * FROM geojson;")
+        rows = c.fetchall()
+        res = {}
+        for row in rows:
+            li = ast.literal_eval(row[4])
+            point = Point(float(req_data["lat"]), float(req_data["long"]))
+            polygon = Polygon(li)
+            if polygon.contains(point):
+                res["parent"] = row[3]
+                res["name"] = row[1]
+                return jsonify(res)
+        return jsonify({"Status": "404", "Msg": "Not Found"})
     else:
         return jsonify(bad_req)
 

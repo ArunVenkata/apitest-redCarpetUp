@@ -1,5 +1,7 @@
 import math as math_stl
 
+import psycopg2 as sql
+
 
 def earth_distance(lat1, lon1, lat2, lon2):
     """
@@ -38,3 +40,27 @@ def earth_distance(lat1, lon1, lat2, lon2):
     d = radius * c
 
     return d
+
+
+if __name__ == '__main__':
+    conn = sql.connect(host="localhost", database="in-data",
+                       user="postgres", password="root", port="5555")
+
+    c = conn.cursor()
+
+    c.execute("CREATE EXTENSION IF NOT EXISTS cube CASCADE;")
+    c.execute("CREATE EXTENSION  IF NOT EXISTS earthdistance CASCADE;")
+
+    # c.execute("""SELECT (point(17.726675,83.312320) <@> point(17.727365, 83.314305))""")
+
+    # c.execute("""CREATE FUNCTION dist(lat1 float, lon1 float, lat2 float, lon2 float) RETURNS integer AS $$
+    # BEGIN
+    # RETURN point(lat1,lon1) <@> point(lat2, lon2);
+    # END; $$
+    # LANGUAGE PLPGSQL;
+    # """)
+    # conn.commit()
+    # c.execute("SELECT key, latitude, longitude from indata WHERE dist(1,2,45.12, 71.12)<=5;")
+    print(c.fetchall()[0][0])
+
+    conn.close()
