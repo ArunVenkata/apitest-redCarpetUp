@@ -1,17 +1,17 @@
 import psycopg2 as sql
 
-conn = sql.connect(host="localhost", database="in-data",
-                   user="postgres", password="root", port="5555")
+conn = sql.connect(host="localhost", database="test_db",
+                   user="arun", password="root", port="5432")
 
 c = conn.cursor()
 
 with open("in-data.csv", "r") as csvfile:
     li = [entry.split(",") for entry in csvfile.read().split("\n")]
     # c.execute("DROP TABLE indata;")
-    crt_part_query = " TEXT, ".join(li[0]).upper()
-    c.execute("CREATE TABLE indata(ID INTEGER PRIMARY KEY, {0} TEXT)".format(crt_part_query))
-    print(li[1:10])
-    c.commit()
+    # crt_part_query = " TEXT, ".join(li[0]).upper()
+    # c.execute("CREATE TABLE indata(ID INTEGER PRIMARY KEY, {0} TEXT)".format(crt_part_query))
+    # print(li[1:10])
+    # conn.commit()
 
     # Load Data
     ins_part_query = ",".join(li[0]).upper()

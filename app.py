@@ -2,15 +2,16 @@ import ast
 import json
 
 import psycopg2 as sql
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, abort
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 
 from earthdist import earth_distance
 
 app = Flask(__name__)
-conn = sql.connect(host="localhost", database="in-data",
-                   user="postgres", password="root", port="5555")
+conn = sql.connect(host="localhost", database="test_db",
+                   user="arun", password="root", port="5432")
+app.config["DB_URI"] = "localhost"
 
 c = conn.cursor()
 
@@ -22,6 +23,8 @@ frbd_req = {"Status": "403", "Msg": "Forbidden"}
 def post_loc():
     if request.json:
 
+        if request.json == "{}":
+            abort(400)
         req_data = json.loads(request.json)
 
         # get all latitudes and longitudes
@@ -190,4 +193,5 @@ def fallback(dummy):
 
 
 if __name__ == '__main__':
+    # print("HELLO")
     app.run()
